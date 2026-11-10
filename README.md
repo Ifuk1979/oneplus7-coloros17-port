@@ -55,3 +55,12 @@ Screenshots taken on the phone running 17k (2026-11-10).
 | [release/17k/FACTS.md](release/17k/FACTS.md) | Hashes and verified facts of the shipped images |
 | [release/17k/BUILD_SOURCES.md](release/17k/BUILD_SOURCES.md) | Build inputs and how to rebuild |
 | [release/17d/source/history/](release/17d/source/history/) | Original working handoffs and test notes, 2026-10-14 to 2026-10-17 |
+
+## Credits
+
+This port stands on two projects. Thank you to both:
+
+- **[LineageOS](https://lineageos.org/)** - the kernel (`android_kernel_oneplus_sm8150`, 4.14), the vendor image, device trees and the guacamole nightly builds that provide the hardware layer of this port. Downloads: <https://download.lineageos.org/devices/guacamole/builds>.
+- **Axis GSI** (`axisgsiupdates`) - the ColorOS 17 (PLK110) GSI that is the system donor. Releases: <https://sourceforge.net/projects/axisgsiupdates/>.
+
+ColorOS, OxygenOS and OnePlus/OPPO firmware remain the property of their owners; this repository ships only build scripts, patches and documentation (images are distributed separately).
