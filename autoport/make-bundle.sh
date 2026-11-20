@@ -29,7 +29,8 @@ cp_rel() { # path relative to the repo (file or dir) -> same place in the bundle
 
 say "bundle: $B"
 # ---- scripts
-cp_rel autoport/autoport.sh; cp_rel autoport/lib; cp_rel autoport/templates; cp_rel autoport/README.md
+cp_rel autoport/autoport.sh; cp_rel autoport/lib; cp_rel autoport/templates; cp_rel autoport/README.md; cp_rel autoport/README.zh-CN.md
+cp "$REPO/autoport/README.zh-CN.md" "$B/README.zh-CN.md"
 cp "$REPO/autoport/README.md" "$B/README.md"
 printf '#!/bin/bash\nexec bash "$(dirname "$(readlink -f "$0")")/autoport/autoport.sh" "$@"\n' > "$B/autoport.sh"
 cp_rel tools-reforge

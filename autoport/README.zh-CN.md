@@ -1,0 +1,119 @@
+# OnePlus7Port AutoPort（自动移植脚本）
+
+[English](README.md)
+
+把 **一加 16（PYB110，国行）ColorOS 17 全量 OTA 包** 自动做成 **一加 7 Pro（GM1910）** 可直接刷入的 fastboot 刷机包。
+生成的刷机包和已发布的 `ColorOS17.0.1.201(los20261011-r2)` 完全同样的结构：带 Windows 和 Linux/macOS 刷机脚本，
+分 NoRoot（无 Root）和 Magisk 两种刷法，包内带固件，**不需要先刷任何底包**。
+
+脚本运行的就是制作已发布版本时用的同一套构建步骤（`tools-reforge/`），底层是 LineageOS 24（20261011）的 vendor 和内核。
+除 ColorOS 系统包以外，需要的所有文件都在 AutoPort 压缩包里。
+
+## 需要准备
+
+- **电脑**：Windows 10/11 装好 **WSL2**（Ubuntu 22.04 或 24.04），或者一台 x86_64 的 Linux 电脑（Ubuntu/Debian，有 root 权限）。
+- **空间**：Linux 分区里剩余 **80 GB**（是 WSL 里面的空间，不是 C 盘 `/mnt/c`）。内存 8 GB 就够。
+- **网络**：第一次运行要联网安装工具（apt 软件包）。
+- **系统包**：一加 16（PYB110）ColorOS 17 的 **全量** OTA 包（zip 里有 `payload.bin`，约 10 GB）。
+  已验证版本：**PYB110_17.0.1.201(CN01)**。其他 17.x 版本可能也能用：每个补丁在打之前都会检查，对不上时会停下并提示，
+  不会生成坏的镜像。增量包（没有 `payload.bin`）不能用。
+- **AutoPort 压缩包**：`OnePlus7Port-AutoPort-20261120.tar.gz`（约 2.1 GB），
+  SHA-256 `06e571ce24cfc1799f14e38bde42eb31a0b8d29b489cab9d468549402d9d1489`。
+
+### 还没装 WSL？
+
+用管理员身份打开 PowerShell，执行：
+
+```powershell
+wsl --install -d Ubuntu-24.04
+```
+
+按提示重启电脑，第一次打开 Ubuntu 时设置一个用户名和密码。
+
+## 使用方法
+
+```bash
+# Windows：在 PowerShell 里执行  wsl -u root   （直接以 root 进入 Ubuntu）
+# Linux 或普通用户进入的 WSL：先执行
+sudo -i
+
+cd ~
+tar -xzf /mnt/c/Users/<你的用户名>/Downloads/OnePlus7Port-AutoPort-20261120.tar.gz
+cd OnePlus7Port-AutoPort-20261120
+bash autoport.sh /mnt/c/Users/<你的用户名>/Downloads/<PYB110全量包>.zip
+```
+
+**一定要在 Linux 里（`~`）解压**，不要解压到 Windows 的盘上：构建需要 Linux 的文件权限和 SELinux 标签。
+Windows 的 `C:\Users\xxx\Downloads` 在 WSL 里就是 `/mnt/c/Users/xxx/Downloads`。
+
+运行过程：
+
+1. 检查电脑环境（WSL2、root、loop 设备、ext4 分区、剩余空间）。
+2. 自动安装工具：apt 软件包，以及用包内源码编译 secilc 3.11（Ubuntu 自带的版本太旧，编译不了 Android 17 的 SELinux 策略）。
+3. 读取并检查系统包（机型必须是 PYB110）。
+4. 构建 system、vendor、my_stock、boot 等镜像。
+5. 打包成刷机包。
+
+整个过程大约 30 分钟到 2 小时，看电脑速度。完成后得到：
+
+```
+/root/op7-autoport/release/ColorOS17.0.1.201(los20261011-r2)/          刷机包文件夹（刷机脚本 + 镜像）
+/root/op7-autoport/release/OnePlus7Pro-ColorOS17.0.1.201(los20261011-r2).zip
+```
+
+把 zip 复制到 Windows，例如：
+
+```bash
+cp /root/op7-autoport/release/*.zip /mnt/c/Users/<你的用户名>/Desktop/
+```
+
+在 Windows 上解压，按里面的 `README.md` 刷机：双击 `Install-NoRoot.bat`（无 Root）或 `Install-Magisk.bat`（带 Magisk）。
+Linux/macOS 用 `bash ./install.sh` 或 `bash ./install.sh --magisk`。
+
+### 先只检查不构建
+
+```bash
+bash autoport.sh <PYB110全量包>.zip --check
+```
+
+只检查电脑、安装工具、读取系统包，几分钟就结束，不生成任何镜像。确认没问题再去掉 `--check` 正式构建。
+
+### 参数
+
+| 参数 | 说明 |
+|---|---|
+| `--check` | 只检查电脑、安装工具、读取系统包，不构建 |
+| `--base 目录` | 工作文件、工具、输出放在哪里（默认 `/root/op7-autoport`，必须是 ext4） |
+| `--rev N` | 版本名里的重制序号（默认 2，即 `los20261011-r2`） |
+| `--from NN` | 出错修好后从第 NN 步继续（`01 10 11 12 13 14 18 20 30`），或 `package` 只重新打包 |
+| `--no-zip` | 只生成刷机包文件夹，不打 zip（省 12 GB 空间和十几分钟） |
+| `--no-apt` | 不运行 apt（`autoport/lib/bootstrap.sh` 里列出的软件包需要自己装好） |
+
+日志：解压目录下的 `docs/logs/<日期>-autoport.log`，每一步还有单独的日志放在同一目录。
+
+## 说明
+
+- 每次构建都会给 system 生成一把 **新的** AVB 签名密钥（`/root/op7-autoport/work/avb/port_key.pem`）。手机的 vbmeta 关闭了校验，
+  所以密钥不需要和任何人的一致。
+- boot 镜像和 ColorOS 系统包无关。如果构建出来的 boot 和已发布版本里经过真机测试的 boot 内容一致，就直接使用测试过的
+  `boot.img` 和它的 Magisk v31.0 修补版；如果不一致，刷机包只有 NoRoot 刷法，并会给出提示。
+- 和已发布版本一样是开发版：SELinux 宽容模式（permissive），adb 有 root。
+- 如果某一步停下并提示 “... changed” 或 “not found”，说明这个系统包里某个要打补丁的文件和 17.0.1.201 不一样。
+  提示里会写出是哪个文件，这个版本需要作者更新移植后才能用。
+- 构建完成后 `/root/op7-autoport` 会占用约 60 GB，不再需要时可以删除：`rm -rf /root/op7-autoport`。
+
+## 常见问题
+
+**提示 WSL1 / no loop device**：在 PowerShell 执行 `wsl --set-version Ubuntu-24.04 2`，把发行版转成 WSL2。
+
+**提示 work directory is on a Windows drive**：工作目录不能放在 `/mnt/c`，用默认的 `/root/op7-autoport`，或用 `--base` 指定 Linux 里的目录。
+
+**提示 not enough space**：WSL 的虚拟磁盘空间不够，清理空间后再运行；中途失败的话加 `--from <步骤>` 继续，不用从头来。
+
+**提示 has no payload.bin**：用的不是全量包，换成 PYB110 ColorOS 17 的全量 OTA 包。
+
+**提示 model 'xxx'**：系统包不是一加 16（PYB110）的，AutoPort 只支持 PYB110。
+
+## 致谢
+
+LineageOS（vendor、内核），OnePlus/OPLUS（ColorOS、固件），Magisk（topjohnwu），SELinux 项目（secilc）。
