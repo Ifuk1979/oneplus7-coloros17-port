@@ -29,8 +29,8 @@ cp_rel() { # path relative to the repo (file or dir) -> same place in the bundle
 
 say "bundle: $B"
 # ---- scripts
-cp_rel autoport/autoport.sh; cp_rel autoport/lib; cp_rel autoport/templates; cp_rel autoport/README.md; cp_rel autoport/README.zh-CN.md
-cp "$REPO/autoport/README.zh-CN.md" "$B/README.zh-CN.md"
+cp_rel autoport/autoport.sh; cp_rel autoport/lib; cp_rel autoport/templates; cp_rel autoport/README.md; cp_rel "autoport/自动移植脚本说明.md"
+cp "$REPO/autoport/自动移植脚本说明.md" "$B/自动移植脚本说明.md"
 cp "$REPO/autoport/README.md" "$B/README.md"
 printf '#!/bin/bash\nexec bash "$(dirname "$(readlink -f "$0")")/autoport/autoport.sh" "$@"\n' > "$B/autoport.sh"
 cp_rel tools-reforge
@@ -52,6 +52,8 @@ cp_rel tools/live/prop-compare/IDENTITY.md; cp_rel tools/live/prop-compare/b16
 cp_rel tools/live/BAKE-LIST.md
 CD=tools/live/camera-donor17
 for f in bake bake-7012 OplusCamera-7012-t6-sys.apk pyb-sdk-v16.jar oplus_camera_config.pyb2.json; do cp_rel "$CD/$f"; done
+cp_rel tools/live/camera/OnePlusCamera-H40-v10.apk                     # H.40 camera, video-fixed v10 (stage 13)
+for f in patch_mediacodec_crop.py framework-classes3-b34.dex bootimage; do cp_rel "tools/live/wechat-resize-test/$f"; done   # B34 (stage 12)
 
 # ---- LineageOS 24 (20261011) images + the one file of its system image stage 10 needs
 mkdir -p "$B/StockRom/LineageOS24/payload" "$B/StockRom/LineageOS24/extract"
@@ -66,7 +68,12 @@ E="$B/StockRom/H40/extract"; mkdir -p "$E/odm/overlay" "$E/odm/etc/power_profile
 mount -o ro,loop "$REPO/StockRom/H40/images/system.img" "$M/h40s"; mount -o ro,loop "$M/h40s/system/euclid/odm.img" "$M/h40o"
 cp "$M/h40o/overlay/oplus_framework_res_overlay.display.product.18821.apk" "$E/odm/overlay/"
 cp "$M/h40o/etc/power_profile/power_profile.xml" "$E/odm/etc/power_profile/"
-umount "$M/h40o" "$M/h40s"
+umount "$M/h40o"
+mkdir -p "$M/h40p" "$E/my_product/priv-app" "$E/my_product/etc/permissions"      # H.40 camera apps (stage 13)
+mount -o ro,loop "$M/h40s/system/euclid/my_product.img" "$M/h40p"
+cp -a "$M/h40p/priv-app/OnePlusCamera" "$M/h40p/priv-app/OnePlusCameraService" "$E/my_product/priv-app/"
+cp "$M/h40p/etc/permissions/com.oneplus.camera.xml" "$M/h40p/etc/permissions/com.oneplus.camera.service.xml" "$E/my_product/etc/permissions/"
+umount "$M/h40p" "$M/h40s"
 mount -o ro,loop "$REPO/StockRom/H40/images/vendor.img" "$M/h40v"
 cp "$M/h40v/lib/hw/sound_trigger.primary.msmnile.so" "$M/h40v/lib/hw/android.hardware.soundtrigger@2.1-impl.so" "$E/vendor/lib/hw/"
 umount "$M/h40v"

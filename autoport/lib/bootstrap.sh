@@ -4,10 +4,10 @@
 # which cannot compile the Android 17 policy).
 
 APT_PKGS="python3 default-jre-headless libsmali-java apktool zipalign erofs-utils e2fsprogs lz4 cpio attr zip unzip xz-utils
-  util-linux file binutils patch openssl rsync pigz build-essential flex bison pkg-config"
+  util-linux file binutils patch openssl rsync pigz build-essential flex bison pkg-config xxd"
 # tool -> package, checked after apt (a package rename on another distro shows up here, not deep inside a stage)
 NEED_TOOLS="python3 java smali baksmali apktool zipalign mkfs.erofs dump.erofs fsck.erofs e2fsck mke2fs resize2fs lz4 cpio
-  getfattr setfattr zip unzip xz unshare losetup file strings patch openssl sha256sum truncate"
+  getfattr setfattr zip unzip xz unshare losetup file strings patch openssl sha256sum truncate xxd"
 SELINUX_VER=3.11
 LIBSEPOL_SHA=79f3d2c88f44b7eb5cf54d9792e03232297e17f97a179163f2750099a00f164d
 SECILC_SHA=1fb7de005d35ae0ac6ff8f8fc955d08a15b5c1a67e961b97ef987576af0db11a

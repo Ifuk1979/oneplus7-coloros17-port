@@ -1,6 +1,6 @@
 # OnePlus7Port AutoPort
 
-[中文说明](README.zh-CN.md)
+[中文说明](自动移植脚本说明.md)
 
 Turns a **OnePlus PYB110 (OnePlus 16, China) ColorOS 17 full OTA zip** into a flash-ready **OnePlus 7 Pro (GM1910)** fastboot
 package: the same layout as the published `ColorOS17.0.1.201(los20261011-r2)` release (installers for Windows and

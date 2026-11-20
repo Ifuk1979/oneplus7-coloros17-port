@@ -15,22 +15,49 @@ MS="$WORK/mystock-tree"; rm -rf "$MS"; mkdir -p "$W/ms-mnt"
 mount -o ro,loop "$WORK/cache/my_stock-$CACHE_TAG.img" "$W/ms-mnt"; say "copying the .105 my_stock tree (4.7 GB)"; cp -a "$W/ms-mnt/." "$MS/" 2>/dev/null || { mkdir -p "$MS"; cp -a "$W/ms-mnt/." "$MS/"; }
 umount "$W/ms-mnt"
 CAMX="$MS"
-# PYB110: the H.40 OnePlusCamera/OnePlusCameraService apps are NOT shipped (live 2026-11-17: com.oneplus.camera.service aborts at start, no seapp_contexts match for
-# uid 1000 privapp targetSdk 29 on .201). Only the PLK110 build keeps them.
-if [ "$DONOR" = plk110 ]; then
+# H.40 OnePlusCamera + OnePlusCameraService (both donors since 2026-11-20, user request). On .105/.201 com.oneplus.camera.service
+# (sharedUserId system, uid 1000) aborted in zygote: selinux_android_setcontext(1000, "default:privapp:...") has no seapp_contexts
+# match because its H.40 signer is not this build's platform key (seinfo default). Fix: its signing certificate is added to
+# product_mac_permissions.xml as seinfo platform (-> system_app, like on H.40). The camera app itself stays a normal priv_app.
+H40CS_CERT_SHA=fc98dae63ad39626   # first 16 hex of sha256(DER cert) of OnePlusCameraService.apk META-INF/CERT.RSA
+if true; then
 # ---- H.40 camera apps (old 50-60)
 mkdir -p /mnt/h40s /mnt/h40myp
-mountpoint -q /mnt/h40s || mount -o ro,loop $P/StockRom/H40/images/system.img /mnt/h40s
-mountpoint -q /mnt/h40myp || mount -o ro,loop /mnt/h40s/system/euclid/my_product.img /mnt/h40myp
+if [ -n "${SRC_H40_EXTRACT:-}" ]; then   # AutoPort: the two priv-app dirs + permission XMLs pre-extracted (same relative paths)
+  mountpoint -q /mnt/h40myp || mount --bind "$SRC_H40_EXTRACT/my_product" /mnt/h40myp
+else
+  mountpoint -q /mnt/h40s || mount -o ro,loop $P/StockRom/H40/images/system.img /mnt/h40s
+  mountpoint -q /mnt/h40myp || mount -o ro,loop /mnt/h40s/system/euclid/my_product.img /mnt/h40myp
+fi
 cp -a /mnt/h40myp/priv-app/OnePlusCamera /mnt/h40myp/priv-app/OnePlusCameraService "$CAMX/priv-app/"
+PAL=$(getfattr -n security.selinux --only-values "$CAMX/priv-app")   # label like the donor's own priv-app (the extract has no xattrs)
+for d in OnePlusCamera OnePlusCameraService; do
+  chown -R root:root "$CAMX/priv-app/$d"; find "$CAMX/priv-app/$d" -type d -exec chmod 0755 {} +; find "$CAMX/priv-app/$d" -type f -exec chmod 0644 {} +
+  find "$CAMX/priv-app/$d" -exec setfattr -h -n security.selinux -v "$PAL" {} +
+done
+# seinfo platform for the H.40 camera service signer (mac_permissions is read by PackageManager from /product/etc/selinux)
+CSA="$CAMX/priv-app/OnePlusCameraService/OnePlusCameraService.apk"
+CSR=$(unzip -l "$CSA" | awk '/META-INF\/[^ ]*\.RSA$/ {print $4}' | head -1)
+CSH=$(unzip -p "$CSA" "$CSR" | openssl pkcs7 -inform DER -print_certs | openssl x509 -outform DER | od -An -v -tx1 | tr -d ' \n')
+[ "$(printf %s "$CSH" | xxd -r -p | sha256sum | cut -c1-16)" = "$H40CS_CERT_SHA" ] || die "OnePlusCameraService signer changed"
+MP="$T/product/etc/selinux/product_mac_permissions.xml"
+[ -f "$MP" ] && grep -q '</policy>' "$MP" || die "no product_mac_permissions.xml with </policy> in the donor"
+! grep -qi "$CSH" "$MP" || die "H.40 camera service signer already in product_mac_permissions.xml"
+sed "s|</policy>|    <!-- OnePlus7Port: H.40 OnePlusCameraService (uid 1000) -> seinfo platform -->\n    <signer signature=\"$CSH\">\n        <seinfo value=\"platform\" />\n    </signer>\n</policy>|" "$MP" > "$W/mac.xml"
+[ "$(grep -c '<signer' "$W/mac.xml")" = "$(( $(grep -c '<signer' "$MP") + 1 ))" ] || die "mac_permissions edit failed"
+cat "$W/mac.xml" > "$MP"   # in place: keeps label
 cp -a /mnt/h40myp/etc/permissions/com.oneplus.camera.xml /mnt/h40myp/etc/permissions/com.oneplus.camera.service.xml "$CAMX/etc/permissions/"
+PEL=$(getfattr -n security.selinux --only-values "$CAMX/etc/permissions")
+for x in com.oneplus.camera.xml com.oneplus.camera.service.xml; do
+  chown root:root "$CAMX/etc/permissions/$x"; chmod 0644 "$CAMX/etc/permissions/$x"; setfattr -n security.selinux -v "$PEL" "$CAMX/etc/permissions/$x"
+done
 # v10 = novib + the live-validated video patches (tools/live/rea-analysis/*, all offset-preserving dex edits): EIS bypass,
 # 4K30 session type 0x8116 -> 0, no 960x540 preview-frame reader (4th stream makes the HAL return -38 at 4K).
 # Live test (build 15 + vendor.vidhance.enabled=0 + vendor.audio.hw.aac.encoder=false): 1080p30, 4K30 and 1080p60 recordings
 # are valid HEVC+AAC (docs/logs/camera-video-b14/v10-*.mp4).
 [ "$(sha256sum < $P/tools/live/camera/OnePlusCamera-H40-v10.apk | cut -d' ' -f1)" = 3415078eebeb5c24cade0ae0ba6caa731c2719b5060f1d53a873879ba61fc5e1 ]
 cat $P/tools/live/camera/OnePlusCamera-H40-v10.apk > "$CAMX/priv-app/OnePlusCamera/OnePlusCamera.apk"   # keep label
-umount /mnt/h40myp /mnt/h40s
+umount /mnt/h40myp; if mountpoint -q /mnt/h40s; then umount /mnt/h40s; fi
 # ---- default permissions + donor camera system side (old 61-128; .105 ships my_product/app/OplusCamera: replaced)
 # Its 2019 runtime-permission request loops on Android 17 (dialog never shows): pre-grant like a stock system camera.
 install -D -m 0644 -o root -g root /dev/null "$T/system/etc/default-permissions/oneplus7port-camera.xml"

@@ -4,6 +4,7 @@
 #   b) oplus-services - engineer HAL waitForService (tools/patch-oplus-services-engineer.py)
 #   c) SystemUI.apk   - kernel dim layer (tools/patch-systemui-dim.py + sigblock transplant)
 #   d) WallpaperChooser.apk (B15 video wallpaper release) -> $WORK/extras/ for the my_stock stage (apktool + patch_r0.py)
+#   e) framework.jar  - B34 MediaCodec crop fix (WeChat remote video) + the matching pinned boot image
 # Every patch asserts its pattern, so a changed donor stops the build instead of producing a half-patched image.
 set -euo pipefail
 . "$HERE/config.env"; . "$HERE/lib/common.sh"
@@ -56,4 +57,43 @@ zipalign -f -p 4 "$W/wp.u.apk" "$W/wp.a.apk"
 python3 -I "$P/tools/transplant-apk-sigblock.py" "$WO" "$W/wp.a.apk" "$WORK/extras/WallpaperChooser-portwp.apk"
 sha256sum "$WORK/extras/WallpaperChooser-portwp.apk"
 umount "$W/mnt-ms"
+
+# ---------------------------------------------------------------------------------------------------------------- e) B34 framework.jar
+# WeChat remote video stretched: QTI Codec2 decoders with a Surface report a stale width/height (new crop) after a mid-stream
+# resolution change; MediaCodec.portFixOutputFormat sets width/height from the crop for Surface outputs (patch_mediacodec_crop.py,
+# docs/2026-11-20-wechat-remote-video-stretch.md; live-verified with a real WeChat video call 2026-11-20).
+# framework.jar is in the boot image: the system boot image no longer matches the patched dex (ART would run imageless), so it is
+# replaced by the primary boot image odrefresh compiled on the phone against exactly this classpath (bootimage/, arm64 + arm).
+# That is only valid when every other boot classpath input is byte-identical to the 17.0.1.201 r2 system (bcp-inputs.SHA256SUMS);
+# for any other donor the fix is skipped with a warning and framework.jar / the boot image stay stock.
+B34="$P/tools/live/wechat-resize-test"; BI="$B34/bootimage"; FJ="$T/system/framework/framework.jar"
+(cd "$BI" && sha256sum -c --quiet SHA256SUMS) || die "B34 pinned boot image files changed"
+b34=1
+[ "$(sha256sum < "$FJ" | cut -d' ' -f1)" = 504ca4bf13cec52f4ba7c4e65087fcd60d4738ab26472800d6cad66c1df75dba ] || b34=0
+(cd "$T" && sha256sum -c --quiet "$BI/bcp-inputs.SHA256SUMS") >/dev/null 2>&1 || b34=0
+if [ "$b34" = 1 ]; then
+  # The boot image is bound to the exact bytes of the patched dex, so the pinned dex is installed as-is (it is the
+  # patch_mediacodec_crop.py + smali --api 30 output of this original classes3.dex, the build that was live-tested; a rebuild on
+  # another file system can order classes differently, e.g. AudioAttributes/Audioattributes on a case-insensitive disk).
+  mkdir -p "$W/fj"; (cd "$W/fj" && unzip -q -o "$FJ" classes3.dex)
+  [ "$(sha256sum < "$W/fj/classes3.dex" | cut -d' ' -f1)" = 3070fde66ad55d6e92a351c91e09bb2ec52dca25b3ba7128ddc1d2dc1ec366c3 ] || die "framework classes3.dex is not the 17.0.1.201 original"
+  cp "$B34/framework-classes3-b34.dex" "$W/fj3.dex"
+  cp "$FJ" "$W/framework.jar"; cp "$W/fj3.dex" "$W/classes3.dex"; (cd "$W" && zip -q -0 framework.jar classes3.dex)
+  zipalign -f -p 4 "$W/framework.jar" "$W/framework.a.jar"
+  [ "$(unzip -p "$W/framework.a.jar" classes3.dex | sha256sum | cut -d' ' -f1)" = "$(sha256sum < "$W/fj3.dex" | cut -d' ' -f1)" ] || die "framework.jar repack failed"
+  unzip -v "$W/framework.a.jar" | grep -q ' Stored .* classes3.dex$' || die "framework.jar classes3.dex must be stored uncompressed"
+  inplace "$FJ" "$W/framework.a.jar"
+  for a in arm64 arm; do
+    D="$T/system/framework/$a"; lab=$(getfattr -n security.selinux --only-values "$D/boot.art")
+    [ "$(ls "$D" | grep -c '^boot')" = 144 ] || die "unexpected stock boot image layout in $D"
+    rm -f "$D"/boot*.art "$D"/boot*.oat "$D"/boot*.vdex "$D"/boot*.fsv_meta
+    for f in boot.art boot.oat boot.vdex boot-framework-adservices.art boot-framework-adservices.oat boot-framework-adservices.vdex; do
+      install -m 0644 -o root -g root "$BI/$a/$f" "$D/$f"; setfattr -n security.selinux -v "$lab" "$D/$f"
+    done
+    [ "$(ls "$D" | grep -c '^boot')" = 6 ] || die "boot image replacement left stray files in $D"
+  done
+  say "B34: framework.jar MediaCodec crop fix + matching boot image installed"
+else
+  warn "B34 skipped: framework.jar or the boot classpath differs from 17.0.1.201 r2 (WeChat remote video may stretch after a resolution change)"
+fi
 say "stage 12 done"
