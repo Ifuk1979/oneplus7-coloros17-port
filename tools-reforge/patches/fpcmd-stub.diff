@@ -1,0 +1,211 @@
+--- a/vendor/oplus/hardware/biometrics/fingerprint/V2_1/IBiometricsFingerprintClientCallbackEx$Stub.smali
++++ b/vendor/oplus/hardware/biometrics/fingerprint/V2_1/IBiometricsFingerprintClientCallbackEx$Stub.smali
+@@ -27,6 +27,72 @@
+     return-void
+ .end method
+ 
++.method private static port_u32ToBytes(ILjava/util/ArrayList;)Ljava/util/ArrayList;
++    .registers 7
++
++    new-instance v0, Ljava/util/ArrayList;
++
++    invoke-direct {v0}, Ljava/util/ArrayList;-><init>()V
++
++    invoke-virtual {p1}, Ljava/util/ArrayList;->size()I
++
++    move-result v1
++
++    const/4 v2, 0x0
++
++    :goto_a
++    if-ge v2, v1, :cond_21
++
++    invoke-virtual {p1, v2}, Ljava/util/ArrayList;->get(I)Ljava/lang/Object;
++
++    move-result-object v3
++
++    check-cast v3, Ljava/lang/Integer;
++
++    invoke-virtual {v3}, Ljava/lang/Integer;->intValue()I
++
++    move-result v3
++
++    int-to-byte v3, v3
++
++    invoke-static {v3}, Ljava/lang/Byte;->valueOf(B)Ljava/lang/Byte;
++
++    move-result-object v3
++
++    invoke-virtual {v0, v3}, Ljava/util/ArrayList;->add(Ljava/lang/Object;)Z
++
++    add-int/lit8 v2, v2, 0x1
++
++    goto :goto_a
++
++    :cond_21
++    const-string v3, "PortFpCmd"
++
++    new-instance v4, Ljava/lang/StringBuilder;
++
++    invoke-direct {v4}, Ljava/lang/StringBuilder;-><init>()V
++
++    const-string v1, "onFingerprintCmd cmd="
++
++    invoke-virtual {v4, v1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v4, p0}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
++
++    const-string v1, " u32="
++
++    invoke-virtual {v4, v1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v4, p1}, Ljava/lang/StringBuilder;->append(Ljava/lang/Object;)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v4}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
++
++    move-result-object v4
++
++    invoke-static {v3, v4}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
++
++    return-object v0
++.end method
++
+ 
+ # virtual methods
+ .method public asBinder()Landroid/os/IHwBinder;
+@@ -272,9 +338,9 @@
+ 
+     const-string v2, "android.hidl.base@1.0::IBase"
+ 
+-    sparse-switch p1, :sswitch_data_f0
++    sparse-switch p1, :sswitch_data_f4
+ 
+-    goto/16 :goto_ee
++    goto/16 :goto_f2
+ 
+     .line 669
+     :sswitch_b
+@@ -284,7 +350,7 @@
+     invoke-virtual {p0}, Lvendor/oplus/hardware/biometrics/fingerprint/V2_1/IBiometricsFingerprintClientCallbackEx$Stub;->notifySyspropsChanged()V
+ 
+     .line 672
+-    goto/16 :goto_ee
++    goto/16 :goto_f2
+ 
+     .line 658
+     :sswitch_13
+@@ -306,7 +372,7 @@
+     invoke-virtual {p3}, Landroid/os/HwParcel;->send()V
+ 
+     .line 664
+-    goto/16 :goto_ee
++    goto/16 :goto_f2
+ 
+     .line 648
+     .end local v0    # "_hidl_out_info":Landroid/hidl/base/V1_0/DebugInfo;
+@@ -323,11 +389,11 @@
+     invoke-virtual {p3}, Landroid/os/HwParcel;->send()V
+ 
+     .line 653
+-    goto/16 :goto_ee
++    goto/16 :goto_f2
+ 
+     .line 643
+     :sswitch_33
+-    goto/16 :goto_ee
++    goto/16 :goto_f2
+ 
+     .line 635
+     :sswitch_35
+@@ -337,7 +403,7 @@
+     invoke-virtual {p0}, Lvendor/oplus/hardware/biometrics/fingerprint/V2_1/IBiometricsFingerprintClientCallbackEx$Stub;->setHALInstrumentation()V
+ 
+     .line 638
+-    goto/16 :goto_ee
++    goto/16 :goto_f2
+ 
+     .line 601
+     :sswitch_3d
+@@ -458,7 +524,7 @@
+     invoke-virtual {p3}, Landroid/os/HwParcel;->send()V
+ 
+     .line 630
+-    goto :goto_ee
++    goto :goto_f2
+ 
+     .line 590
+     .end local v0    # "_hidl_out_hashchain":Ljava/util/ArrayList;, "Ljava/util/ArrayList<[B>;"
+@@ -481,7 +547,7 @@
+     invoke-virtual {p3}, Landroid/os/HwParcel;->send()V
+ 
+     .line 596
+-    goto :goto_ee
++    goto :goto_f2
+ 
+     .line 578
+     .end local v0    # "_hidl_out_descriptor":Ljava/lang/String;
+@@ -510,7 +576,7 @@
+     invoke-virtual {p3}, Landroid/os/HwParcel;->send()V
+ 
+     .line 585
+-    goto :goto_ee
++    goto :goto_f2
+ 
+     .line 567
+     .end local v0    # "fd":Landroid/os/NativeHandle;
+@@ -534,7 +600,7 @@
+     invoke-virtual {p3}, Landroid/os/HwParcel;->send()V
+ 
+     .line 573
+-    goto :goto_ee
++    goto :goto_f2
+ 
+     .line 556
+     .end local v0    # "_hidl_out_descriptors":Ljava/util/ArrayList;, "Ljava/util/ArrayList<Ljava/lang/String;>;"
+@@ -548,7 +614,11 @@
+ 
+     .line 559
+     .local v0, "cmdId":I
+-    invoke-virtual {p2}, Landroid/os/HwParcel;->readInt8Vector()Ljava/util/ArrayList;
++    invoke-virtual {p2}, Landroid/os/HwParcel;->readInt32Vector()Ljava/util/ArrayList;
++
++    move-result-object v1
++
++    invoke-static {v0, v1}, Lvendor/oplus/hardware/biometrics/fingerprint/V2_1/IBiometricsFingerprintClientCallbackEx$Stub;->port_u32ToBytes(ILjava/util/ArrayList;)Ljava/util/ArrayList;
+ 
+     move-result-object v1
+ 
+@@ -563,13 +633,13 @@
+     invoke-virtual {p0, v0, v1, v2}, Lvendor/oplus/hardware/biometrics/fingerprint/V2_1/IBiometricsFingerprintClientCallbackEx$Stub;->onFingerprintCmd(ILjava/util/ArrayList;I)V
+ 
+     .line 562
+-    goto :goto_ee
++    goto :goto_f2
+ 
+     .line 545
+     .end local v0    # "cmdId":I
+     .end local v1    # "result":Ljava/util/ArrayList;, "Ljava/util/ArrayList<Ljava/lang/Byte;>;"
+     .end local v2    # "resultLen":I
+-    :sswitch_db
++    :sswitch_df
+     invoke-virtual {p2, v0}, Landroid/os/HwParcel;->enforceInterface(Ljava/lang/String;)V
+ 
+     .line 547
+@@ -600,14 +670,14 @@
+     .end local v0    # "lenth":I
+     .end local v1    # "keys":Ljava/util/ArrayList;, "Ljava/util/ArrayList<Ljava/lang/Integer;>;"
+     .end local v2    # "values":Ljava/util/ArrayList;, "Ljava/util/ArrayList<Ljava/lang/String;>;"
+-    :goto_ee
++    :goto_f2
+     return-void
+ 
+     nop
+ 
+-    :sswitch_data_f0
++    :sswitch_data_f4
+     .sparse-switch
+-        0x1 -> :sswitch_db
++        0x1 -> :sswitch_df
+         0x2 -> :sswitch_c8
+         0xf43484e -> :sswitch_b7
+         0xf444247 -> :sswitch_a2
