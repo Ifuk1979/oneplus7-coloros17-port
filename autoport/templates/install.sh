@@ -18,7 +18,7 @@ export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*'   # Git Bash: keep /data/... p
 
 RELEASE='@RELEASE@'
 MYSTOCK_NAME=@MYSTOCK@
-FIRMWARE="abl aop bluetooth cmnlib cmnlib64 devcfg dsp hyp keymaster modem qupfw storsec tz xbl xbl_config"   # OxygenOS 11 H.40 firmware (LOGO not touched)
+FIRMWARE="@FIRMWARE@"   # OxygenOS 11 H.40 firmware in images/firmware (LOGO not touched); empty = package without firmware
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 say() { printf '%s\n' "$*"; }
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd); cd "$SCRIPT_DIR"
@@ -52,7 +52,8 @@ check_image() {
   [[ "$act" == "$exp" ]] || { echo; die "SHA-256 mismatch for images/$f: $act"; }; echo OK
 }
 say "== $RELEASE, $VARIANT install =="
-for f in $(printf 'firmware/%s.img ' $FIRMWARE) dtbo.img vbmeta.img "$(basename "$BOOT_IMG")" vendor.img system.img "$MYSTOCK_NAME"; do check_image "$f"; done
+FW_FILES=""; for p in $FIRMWARE; do FW_FILES="$FW_FILES firmware/$p.img"; done
+for f in $FW_FILES dtbo.img vbmeta.img "$(basename "$BOOT_IMG")" vendor.img system.img "$MYSTOCK_NAME"; do check_image "$f"; done
 [[ $VARIANT != magisk ]] || check_image Magisk-v31.0.apk
 MYSTOCK_SHA=$(expected "$MYSTOCK_NAME"); MYSTOCK_SIZE=$(wc -c < "images/$MYSTOCK_NAME" | tr -d ' ')
 
@@ -115,6 +116,7 @@ say "Flashing the active slot _$slot ..."
 # `fastboot flashing unlock_critical` refuse the critical ones (abl, xbl, ...): those are skipped with a warning; a phone that
 # already runs H.40 firmware (any OxygenOS 11.0.x / LineageOS install made from H.40) loses nothing.
 SKIPPED_FW=''
+[[ -n "$FIRMWARE" ]] || say "This package has no firmware: the phone keeps its current firmware (it must be OxygenOS 11 H.40)."
 for p in $FIRMWARE; do
   if out=$("$FASTBOOT" flash "${p}_$slot" "images/firmware/$p.img" 2>&1); then printf '%s\n' "$out" | tail -1
   elif printf '%s' "$out" | grep -qi 'critical'; then SKIPPED_FW="$SKIPPED_FW $p"; say "WARNING: ${p}_$slot is a critical partition the bootloader refuses (not unlocked): skipped."

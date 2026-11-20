@@ -4,3 +4,8 @@
 /tools/*.sh text eol=lf
 /tools/*.py text eol=lf
 /tools/avb/*.py text eol=lf
+# Release folders: installers and checksum files must keep LF (bash, awk), the .bat launchers CRLF
+/release/ColorOS*/** text eol=lf
+/release/ColorOS*/*.bat text eol=crlf
+/release/*-SHA256SUMS.txt text eol=lf
+/release/*.md text eol=lf

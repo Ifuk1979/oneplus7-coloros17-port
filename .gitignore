@@ -12,3 +12,5 @@
 *.keystore
 adbkey
 adbkey.pub
+/release/*.zip
+/release/autoport/

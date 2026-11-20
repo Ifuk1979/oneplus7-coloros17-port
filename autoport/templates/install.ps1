@@ -10,7 +10,7 @@ param([switch]$Magisk, [switch]$DryRun, [switch]$Wipe, [switch]$NoWipe, [switch]
 $ErrorActionPreference = 'Stop'
 $Release = '@RELEASE@'
 $MyStock = '@MYSTOCK@'
-$Firmware = 'abl aop bluetooth cmnlib cmnlib64 devcfg dsp hyp keymaster modem qupfw storsec tz xbl xbl_config'.Split(' ')
+$Firmware = @('@FIRMWARE@'.Split(' ') | Where-Object { $_ })   # empty = package without firmware
 function Die($m) { Write-Host "ERROR: $m" -ForegroundColor Red; exit 1 }
 if ($Wipe -and $NoWipe) { Die '-Wipe and -NoWipe cannot be combined.' }
 Set-Location -LiteralPath $PSScriptRoot
@@ -92,6 +92,7 @@ function Flash($part, $img) { & fastboot flash $part $img; if ($LASTEXITCODE) { 
 Write-Host "Flashing the active slot _$slot ..."
 # Firmware = OxygenOS 11 H.40. Bootloaders without 'fastboot flashing unlock_critical' refuse the critical ones: skipped with a warning.
 $skipped = @()
+if ($Firmware.Count -eq 0) { Write-Host 'This package has no firmware: the phone keeps its current firmware (it must be OxygenOS 11 H.40).' }
 foreach ($p in $Firmware) {
   $o = (& fastboot flash "${p}_$slot" "images\firmware\$p.img" 2>&1) -join "`n"
   if ($LASTEXITCODE -eq 0) { continue }

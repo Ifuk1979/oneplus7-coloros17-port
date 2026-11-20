@@ -1,24 +1,26 @@
 #!/bin/bash
 # autoport/make-bundle.sh - build the AutoPort archive from this repository (maintainer side, WSL as root).
 #
-#   wsl -u root bash autoport/make-bundle.sh [--dest DIR] [--no-tar]
+#   wsl -u root bash autoport/make-bundle.sh [--dest DIR] [--tar] [--no-copy]
+#   Output: release/autoport/OnePlus7Port-AutoPort-v$AUTOPORT_VERSION/ (the folder to upload to the net disk); --tar also packs a .tar.gz
 #
-# The archive holds everything AutoPort needs except the user's ColorOS ROM: the reforge stages, the tools/live inputs they read,
-# the 7.012 camera bake, the LineageOS 24 (20261011) vendor/boot/dtbo/vbmeta, the four H.40 files the stages read plus the H.40
-# firmware, Magisk v31.0, the phone-tested reference boot images and the SELinux 3.11 sources. It never contains the AVB key of
+# The bundle holds everything AutoPort needs except the user's own ROMs: the reforge stages, the tools/live inputs they read,
+# the 7.012 camera bake, the WeChat-fix boot image, the LineageOS 24 (20261011) vendor/boot/dtbo/vbmeta, the H.40 files the stages read,
+# Magisk v31.0 and the SELinux 3.11 sources (no firmware, no prebuilt boot images). It never contains the AVB key of
 # this repo (every AutoPort run makes its own). The finished tree is scanned for the maintainer's user name, git identity and
 # private keys before it is packed.
 set -euo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 . "$REPO/autoport/lib/common.sh"
 [ "$(id -u)" = 0 ] || die "run as root (wsl -u root)"
-DEST_PARENT=/root/op7-autoport-bundle; TAR=1
+DEST_PARENT=/root/op7-autoport-bundle; TAR=0; COPY=1
+AUTOPORT_VERSION=0.1.0                  # AutoPort_v0.1.0_spinning_jenny
 while [ $# -gt 0 ]; do
-  case "$1" in --dest) DEST_PARENT=${2:?}; shift ;; --no-tar) TAR=0 ;; *) die "unknown option $1" ;; esac; shift
+  case "$1" in --dest) DEST_PARENT=${2:?}; shift ;; --tar) TAR=1 ;; --no-copy) COPY=0 ;; *) die "unknown option $1" ;; esac; shift
 done
-NAME="OnePlus7Port-AutoPort-$(date +%Y%m%d)"
+NAME="OnePlus7Port-AutoPort-v$AUTOPORT_VERSION"
 B="$DEST_PARENT/$NAME"
-REF="$REPO/release/ColorOS17.0.1.201(los20261011-r2)/images"     # phone-tested release: firmware, boot pair, Magisk
+REF="$REPO/release/ColorOS17.0.1.201(los20261011-r2)/images"     # published release: source of the Magisk APK
 SRCTAR=/root/autoport-src
 rm -rf "$B"; mkdir -p "$B"
 cp_rel() { # path relative to the repo (file or dir) -> same place in the bundle
@@ -63,8 +65,9 @@ mkdir -p "$M/los" "$M/h40s" "$M/h40o" "$M/h40v"
 mount -o ro,loop "$REPO/StockRom/LineageOS24/payload/system.img" "$M/los"
 cp "$M/los/system/apex/com.android.tethering.capex" "$B/StockRom/LineageOS24/extract/"; umount "$M/los"
 
-# ---- H.40: the odm overlay + power profile (stage 11), the two sound trigger libs (stage 20), firmware
-E="$B/StockRom/H40/extract"; mkdir -p "$E/odm/overlay" "$E/odm/etc/power_profile" "$E/vendor/lib/hw" "$B/StockRom/H40/firmware"
+# ---- H.40: the odm overlay + power profile (stage 11), camera apps (stage 13), two sound trigger libs (stage 20). No firmware:
+#      users add their own H.40 OTA with --firmware
+E="$B/StockRom/H40/extract"; mkdir -p "$E/odm/overlay" "$E/odm/etc/power_profile" "$E/vendor/lib/hw"
 mount -o ro,loop "$REPO/StockRom/H40/images/system.img" "$M/h40s"; mount -o ro,loop "$M/h40s/system/euclid/odm.img" "$M/h40o"
 cp "$M/h40o/overlay/oplus_framework_res_overlay.display.product.18821.apk" "$E/odm/overlay/"
 cp "$M/h40o/etc/power_profile/power_profile.xml" "$E/odm/etc/power_profile/"
@@ -77,14 +80,10 @@ umount "$M/h40p" "$M/h40s"
 mount -o ro,loop "$REPO/StockRom/H40/images/vendor.img" "$M/h40v"
 cp "$M/h40v/lib/hw/sound_trigger.primary.msmnile.so" "$M/h40v/lib/hw/android.hardware.soundtrigger@2.1-impl.so" "$E/vendor/lib/hw/"
 umount "$M/h40v"
-cp "$REF"/firmware/*.img "$B/StockRom/H40/firmware/"
-(cd "$REF" && grep ' firmware/' SHA256SUMS) | (cd "$B/StockRom/H40" && sha256sum -c --quiet) || die "H.40 firmware copy differs from the release sums"
 
-# ---- Magisk + the phone-tested reference boot pair
-mkdir -p "$B/StockRom/Magisk" "$B/StockRom/reference"
+# ---- Magisk v31.0 (AutoPort makes the Magisk boot on the PC; no prebuilt boot images are shipped)
+mkdir -p "$B/StockRom/Magisk"
 cp "$REF/Magisk-v31.0.apk" "$B/StockRom/Magisk/"
-cp "$REF/boot.img" "$REF/boot-magisk31.img" "$B/StockRom/reference/"
-(cd "$REF" && grep -E ' (boot|boot-magisk31)\.img$' SHA256SUMS) | (cd "$B/StockRom/reference" && sha256sum -c --quiet) || die "reference boot copy differs"
 
 # ---- privacy scan: no maintainer identity, no private keys
 say "privacy scan"
@@ -106,8 +105,15 @@ find "$B" -name '*.pem' -o -name '*.pk8' -o -name '*.jks' -o -name '*.keystore' 
 # ---- sums + archive
 (cd "$B" && find . -type f ! -name BUNDLE-SHA256SUMS -printf '%P\n' | LC_ALL=C sort | xargs -d '\n' sha256sum > BUNDLE-SHA256SUMS)
 say "bundle: $(du -sh "$B" | cut -f1), $(wc -l < "$B/BUNDLE-SHA256SUMS") files"
-[ "$TAR" = 1 ] || { say "tree only: $B"; exit 0; }
 OUTD="$REPO/release/autoport"; mkdir -p "$OUTD"
+if [ "$COPY" = 1 ]; then
+  say "copying the folder to $OUTD/$NAME (upload this folder)"
+  rm -rf "$OUTD/$NAME.part"; rsync -a --no-perms --no-owner --no-group "$B/" "$OUTD/$NAME.part/"
+  (cd "$OUTD/$NAME.part" && sha256sum -c --quiet BUNDLE-SHA256SUMS) || die "copy to $OUTD failed the checksum test"
+  rm -rf "$OUTD/$NAME"; mv "$OUTD/$NAME.part" "$OUTD/$NAME"
+  say "folder: $OUTD/$NAME ($(du -sh "$OUTD/$NAME" | cut -f1), $(wc -l < "$OUTD/$NAME/BUNDLE-SHA256SUMS") files)"
+fi
+[ "$TAR" = 1 ] || exit 0
 say "packing $OUTD/$NAME.tar.gz"
 tar -C "$DEST_PARENT" --owner=0 --group=0 --numeric-owner -cf - "$NAME" | pigz -6 > "$OUTD/$NAME.tar.gz.part"
 mv "$OUTD/$NAME.tar.gz.part" "$OUTD/$NAME.tar.gz"

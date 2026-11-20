@@ -4,6 +4,7 @@
 #   sudo bash autoport.sh <PYB110 full OTA zip> [options]      (WSL: wsl -u root, then the same command)
 #
 # Options:
+#   --firmware ZIP  the OnePlus 7 Pro OxygenOS 11 H.40 full OTA: its firmware goes into the package (else: no firmware)
 #   --base DIR     where work files, tools and the release go (default /root/op7-autoport; must be ext4, not /mnt/c)
 #   --rev N        rebuild counter in the version name (default 2: ColorOS17.0.1.201(los20261011-r2))
 #   --from NN      restart at reforge stage NN (01 10 11 12 13 14 18 20 30) or "package"; earlier results are kept
@@ -20,24 +21,26 @@ export PORT_ROOT
 . "$PORT_ROOT/autoport/lib/bootstrap.sh"
 . "$PORT_ROOT/autoport/lib/donor.sh"
 . "$PORT_ROOT/autoport/lib/package.sh"
+. "$PORT_ROOT/autoport/lib/firmware.sh"
 
 STAGES="01 10 11 12 13 14 18 20 30"
-ROM=""; BASE=/root/op7-autoport; REV=2; FROM=""; CHECK=0; NO_ZIP=0; NO_APT=0
+ROM=""; FWZIP=""; BASE=/root/op7-autoport; REV=2; FROM=""; CHECK=0; NO_ZIP=0; NO_APT=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --base) BASE=${2:?}; shift ;;
+    --firmware) FWZIP=$(readlink -f "${2:?}"); shift ;;
     --rev) REV=${2:?}; shift ;;
     --from) FROM=${2:?}; shift ;;
     --check) CHECK=1 ;;
     --no-zip) NO_ZIP=1 ;;
     --no-apt) NO_APT=1 ;;
-    -h|--help) sed -n 2,16p "$0"; exit 0 ;;
+    -h|--help) sed -n 2,17p "$0"; exit 0 ;;
     -*) die "unknown option $1 (see --help)" ;;
     *) [ -z "$ROM" ] || die "only one ROM zip, got '$ROM' and '$1'"; ROM=$1 ;;
   esac
   shift
 done
-[ -n "$ROM" ] || { sed -n 2,16p "$0"; exit 1; }
+[ -n "$ROM" ] || { sed -n 2,17p "$0"; exit 1; }
 ROM=$(readlink -f "$ROM")
 case "$REV" in *[!0-9]*|"") die "--rev must be a number" ;; esac
 if [ -n "$FROM" ] && [ "$FROM" != package ]; then case " $STAGES " in *" $FROM "*) ;; *) die "--from must be one of: $STAGES package" ;; esac; fi
@@ -78,6 +81,9 @@ OUT='$OUT'
 AVB_KEY='$WORK/avb/port_key.pem'
 MAGISK_APK='$PORT_ROOT/StockRom/Magisk/Magisk-v31.0.apk'
 EOF
+FIRMWARE_DIR=""
+if [ -n "$FWZIP" ]; then firmware_prepare "$FWZIP" "$WORK/firmware"; FIRMWARE_DIR="$WORK/firmware"
+else warn "no --firmware: the package will not contain firmware (the phone must already run OxygenOS 11 H.40)"; fi
 [ "$CHECK" = 1 ] && { say "--check done: host, toolchain and ROM are fine. Run again without --check to build."; exit 0; }
 
 # ---- 4. reforge stages

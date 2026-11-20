@@ -4,16 +4,20 @@
 
 Turns a **OnePlus PYB110 (OnePlus 16, China) ColorOS 17 full OTA zip** into a flash-ready **OnePlus 7 Pro (GM1910)** fastboot
 package: the same layout as the published `ColorOS17.0.1.201(los20261011-r2)` release (installers for Windows and
-Linux/macOS, NoRoot and Magisk variants, firmware included, no earlier package needed).
+Linux/macOS, NoRoot and Magisk variants, no earlier package needed; firmware included when you pass `--firmware`).
 
 It runs the same build stages that produced the published release (`tools-reforge/`), on top of LineageOS 24 (20261011)
-vendor/kernel. Everything except the ColorOS ROM is in this archive.
+vendor/kernel. The AutoPort folder carries only the images the build cannot run without (LineageOS 24 20261011
+vendor/boot/dtbo/vbmeta, no longer downloadable); you bring your own ColorOS ROM and, optionally, the H.40 OTA for firmware.
 
 ## What you need
 
 - Windows 10/11 with **WSL2** (Ubuntu 22.04 or 24.04), or an x86_64 Linux PC with root (Ubuntu/Debian).
 - **80 GB free** on the Linux file system (inside WSL, not on `C:` / `/mnt/c`). 8 GB RAM is enough.
 - Internet for the first run (apt packages).
+- Optional: the OnePlus 7 Pro **OxygenOS 11 H.40** full OTA (`GM1910_11.H.40`, ~4.6 GB), passed with `--firmware`. Its 15 firmware
+  partitions are checked against the published release and put into the package. Without it the package has no firmware and
+  the phone must already run H.40 firmware (latest OxygenOS 11, or LineageOS installed on it).
 - A **full** OTA zip of OnePlus PYB110 ColorOS 17 (has `payload.bin` inside, ~10 GB). Verified with
   **PYB110_17.0.1.201(CN01)**. Other 17.x builds may work: every patch is checked before it is applied, and the build stops with a
   message instead of producing a broken image.
@@ -23,12 +27,13 @@ vendor/kernel. Everything except the ColorOS ROM is in this archive.
 ```bash
 # Windows: open "Ubuntu" from the Start menu, or in PowerShell:  wsl -u root
 sudo -i                                   # (Linux / WSL as a normal user)
-cd ~ && tar -xzf /mnt/c/Users/<you>/Downloads/OnePlus7Port-AutoPort-*.tar.gz
-cd OnePlus7Port-AutoPort-*
-bash autoport.sh /mnt/c/Users/<you>/Downloads/<PYB110 full OTA>.zip
+cd /mnt/c/Users/<you>/Downloads/OnePlus7Port-AutoPort-v0.1.0
+bash autoport.sh /mnt/c/Users/<you>/Downloads/<PYB110 full OTA>.zip \n    --firmware /mnt/c/Users/<you>/Downloads/<GM1910 H.40 full OTA>.zip      # optional
 ```
 
-Extract the archive inside Linux (`~`), not on a Windows drive: the build needs Linux file permissions and SELinux labels.
+Download the whole `OnePlus7Port-AutoPort-v0.1.0` folder (unzip it first if the net disk packs it as a zip) and run it from
+wherever it is, a Windows folder is fine. The build itself works in `/root/op7-autoport` on the Linux file system (80 GB),
+and the first run checks the SHA-256 of every file in the folder, so an incomplete download is reported.
 
 The first run installs the toolchain (apt packages, and secilc 3.11 built from the bundled SELinux sources), checks the ROM,
 then builds for about 1–2 hours. The result:
@@ -45,6 +50,7 @@ Copy the zip to Windows (for example `cp … /mnt/c/Users/<you>/Desktop/`), extr
 
 | Option | |
 |---|---|
+| `--firmware ZIP` | the OnePlus 7 Pro OxygenOS 11 H.40 full OTA: put its firmware into the package |
 | `--check` | only check the PC, install the tools and read the ROM; builds nothing |
 | `--base DIR` | work / tool / output folder (default `/root/op7-autoport`, must be ext4) |
 | `--rev N` | rebuild number in the version name (default 2) |
@@ -58,8 +64,8 @@ Logs: `docs/logs/<date>-autoport.log` and one log per stage next to it.
 
 - Each build signs `system` with its **own** new AVB key (`/root/op7-autoport/work/avb/port_key.pem`); the phone's vbmeta has
   verification disabled, so no key needs to match.
-- The boot image does not depend on the ROM. When the built one has the same content as the phone-tested boot of the published
-  release, the tested `boot.img` and its Magisk v31.0 patch are used; otherwise the package is NoRoot only (a warning says so).
+- The Magisk boot is made on the PC with Magisk v31.0's own `boot_patch.sh` and the settings of the phone-side patch; for the
+  published r2 `boot.img` the result is byte-identical to the phone-made, phone-tested `boot-magisk31.img`.
 - Development build like the published release: SELinux permissive, adb root.
 - If a stage stops with "... changed" or "not found", the ROM differs from 17.0.1.201 in a file the port patches. The
   message names the file; that ROM version needs a port update.
@@ -68,7 +74,7 @@ Logs: `docs/logs/<date>-autoport.log` and one log per stage next to it.
 
 1. Windows 装好 WSL2 的 Ubuntu，Linux 分区留 80 GB 空间。
 2. 准备一加 16（PYB110）ColorOS 17 **全量** OTA 包（里面有 payload.bin），已验证 17.0.1.201。
-3. 以 root 打开 Ubuntu，在 `~` 里解压本压缩包，执行 `bash autoport.sh <全量包路径>`。首次会自动安装工具。
+3. 从网盘下载整个 AutoPort 文件夹，以 root 打开 Ubuntu，进入该文件夹执行 `bash autoport.sh <全量包路径>`。首次会自动安装工具。
 4. 大约 1–2 小时后，在 `/root/op7-autoport/release/` 得到刷机包 zip，复制到 Windows，解压后按里面的 README 用
    `Install-NoRoot.bat` 或 `Install-Magisk.bat` 刷机。不需要先刷任何底包。
 
