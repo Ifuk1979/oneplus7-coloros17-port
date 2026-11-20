@@ -1,0 +1,34 @@
+id	title	status_in_BAKE-LIST	produced_by_stage	proof_check
+B1	Low-flicker options routed to the panel's DC backlight	see BAKE-LIST	11	built in stage; NOT individually verified on the phone yet
+B2	内存扩展 (nandswap) workaround	see BAKE-LIST	11	user-observed OK on 17.0.0.105 smoke build 2026-11-10 (no automated check yet)
+B3	Google Play Store as a privileged app (investigation in progress)	see BAKE-LIST	none (.105 ships a privileged Play Store)	n/a
+B4	Battery level/voltage stale while unplugged (found 2026-10-25) — baked in build 17g rev 2 (`out-plk-build17g...	baked	11	user-observed OK on 17.0.0.105 smoke build 2026-11-10 (no automated check yet)
+B5	Offline-charging loop at low battery (diagnosed 2026-10-29) — fix LIVE on vendor_b, USER-VERIFIED 2026-10-29...	baked	20	user-observed OK on 17.0.0.105 smoke build 2026-11-10 (no automated check yet)
+B6	H.40 camera video stabilisation (Vidhance EIS) — root cause found 2026-10-30, partial fix LIVE (bind mount),...	baked	20 (props) + 13	built in stage; NOT individually verified on the phone yet
+B7	com.android.se crash loop without SIM — FIXED LIVE 2026-10-30, baked into the scripts (not built)	baked	11	user-observed OK on 17.0.0.105 smoke build 2026-11-10 (no automated check yet)
+B8	Qualcomm perf HAL lookup spam — FIXED LIVE 2026-10-30, in `tools/live/odm-services` (install.list + SHA256SU...	live	20 (odm-services perf stub)	built in stage; NOT individually verified on the phone yet
+B9	loc_sys_service ILocAidlGnss retry loop — live-verified 2026-11-02 (`stop loc_sys_service`: 93 → 0 lines /...	baked	11	user-observed OK on 17.0.0.105 smoke build 2026-11-10 (no automated check yet)
+B10	DC dimming flicker at low brightness — USER-VERIFIED LIVE 2026-11-03, baked into scripts, not built	baked	11 + 20	user-observed OK on 17.0.0.105 smoke build 2026-11-10 (no automated check yet)
+B11	FaceService stuck waiting for a virtual face HAL — FIXED LIVE 2026-11-03 (combined stub installed on vendor_...	live	20 (odm-services stub)	built in stage; NOT individually verified on the phone yet
+B12	Hide Settings 注视时不息屏 (keep on looking) — USER-VERIFIED LIVE 2026-11-03 (entry gone), baked into ...	baked	11	built in stage; NOT individually verified on the phone yet
+B13	OPPO Health "rooted device" dialog — shim LIVE-VERIFIED 2026-11-03 (A/B: without it 风险提示 "当前设�...	baked	11	user-observed OK on 17.0.0.105 smoke build 2026-11-10 (no automated check yet)
+B14	Camera provider killed by SIGPIPE — LIVE on vendor_b 2026-11-03 (user-approved rc change), baked into script...	baked	20	built in stage; NOT individually verified on the phone yet
+B15	Battery drain (investigated 2026-11-03 on 17i) — 3 fixes LIVE (incl. video wallpaper, item 1) (lost on reboo...	baked	11 + 12 + 20	user-observed OK on 17.0.0.105 smoke build 2026-11-10 (no automated check yet)
+B16	Props: H.40 / ColorOS values (REPORT §3 items 2–9) — LIVE on vendor_b, VERIFIED after reboot 2026-11-03 (...	baked	20 + 14	getprop vs the B16 block 2026-11-10: 4 keys were overridden by ColorOS, pinned by stage 14, density and LTE thresholds confirmed after the flash
+B17	Identity props, OnePlus 7 Pro values (IDENTITY.md "safe to switch" + "test first") — user-approved 2026-11-0...	baked	11	getprop vs the expected values 2026-11-10 (all matched)
+B18	Keep the user's live wallpaper across reboots — helper LIVE-VERIFIED 2026-11-03 (no reboot), user chose to i...	baked	11	user-observed OK on 17.0.0.105 smoke build 2026-11-10 (no automated check yet)
+B19	Idle battery drain, BLE/Wi-Fi scan experiments (2026-11-04, on 17j-r2) — LIVE, drain effect NOT measured (ph...	baked	n/a (live /data settings)	n/a
+B20	Charging limit (Settings > Battery > charging limit, 85 %) never stopped charging (2026-11-04, on 17j-r2) — ...	baked	20 (odm-services)	user-observed OK on 17.0.0.105 smoke build 2026-11-10 (no automated check yet)
+B20+B21	(ONE BAKE). Charge cap + real gauge — LIVE-VERIFIED 2026-11-04 on 17j-r2 (phone on USB), staged, NOT baked (...	baked	20 (odm-services)	user-observed OK on 17.0.0.105 smoke build 2026-11-10 (no automated check yet)
+B21	Battery % mismatch: framework 97-100 % vs real ~84 % (found 2026-11-04, on 17j-r2) — fix LIVE-VERIFIED 2026-...	baked	20 (odm-services)	user-observed OK on 17.0.0.105 smoke build 2026-11-10 (no automated check yet)
+B22	Every app had no network after the first 17k upgrade: Settings.Global `restricted_networking_mode` = 1 (found ...	baked	20 (odm-services)	user-observed OK on 17.0.0.105 smoke build 2026-11-10 (no automated check yet)
+B23	Lock screen editor "识别景深" stays pending (investigated 2026-11-06, 17k) — NOT a device defect, NO bak...	see BAKE-LIST	n/a	n/a
+B24	Alert slider DOWN = press-and-HOLD the action button (requested 2026-11-06, 17k) — LIVE on the phone; **BAKE...	baked	20 (odm-services)	user-observed OK on 17.0.0.105 smoke build 2026-11-10 (no automated check yet)
+B25	一键闪记 (flash_memory) on the slider: what it really does (investigated 2026-11-06, 17k) — NO live chan...	baked	20 (odm-services)	user-observed OK on 17.0.0.105 smoke build 2026-11-10 (no automated check yet)
+B25b	Slider release ENDS the 一键闪记 capture (live 2026-11-06, 17k) — **BAKED in 17k-r2 rebuilt (2026-11-07,...	baked	20 (odm-services)	user-observed OK on 17.0.0.105 smoke build 2026-11-10 (no automated check yet)
+B26	一键闪记 / 随口记 gets no audio: second concurrent capture stream lands on the starved `audio-record-co...	baked	20	user-observed OK on 17.0.0.105 smoke build 2026-11-10 (no automated check yet)
+B27	3rd-party camera apps (Douyin/WeChat) kill cameraserver ~20 s after the first open/close; front/flip dies (dia...	baked	20 (odm-services)	built in stage; NOT individually verified on the phone yet
+B28	Wallpaper "reset again" re-check (2026-11-07, 17k-r2) - B18 helper is installed and running; reset = nothing w...	see BAKE-LIST	n/a	n/a
+C1	Donor camera — BAKED, PENDING BUILD (2026-11-03; covers C1, C1b-fix; user: "bake camera fixes into build too...	baked	13 + 11	user-observed OK on 17.0.0.105 smoke build 2026-11-10 (no automated check yet)
+C1b	Master mode long exposure / look (investigated 2026-11-03, no live change)	see BAKE-LIST	n/a	n/a
+C1b-fix	Master mode preview overexposed + saved filter missing for some presets (FIXED LIVE 2026-11-03)	live	13	built in stage; NOT individually verified on the phone yet

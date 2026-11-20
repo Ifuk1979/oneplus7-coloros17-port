@@ -1,0 +1,6 @@
+# AutoPort and the reforge stages run in WSL/Linux: keep LF on every checkout (also on Windows with core.autocrlf=true)
+/autoport/** text eol=lf
+/tools-reforge/** text eol=lf
+/tools/*.sh text eol=lf
+/tools/*.py text eol=lf
+/tools/avb/*.py text eol=lf
